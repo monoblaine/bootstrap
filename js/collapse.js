@@ -16,8 +16,7 @@
   var Collapse = function (element, options) {
     this.$element      = $(element)
     this.options       = $.extend({}, Collapse.DEFAULTS, options)
-    this.$trigger      = $('[data-toggle="collapse"][href="#' + element.id + '"],' +
-                           '[data-toggle="collapse"][data-target="#' + element.id + '"]')
+    this.$trigger      = $(this.options.trigger || ('[data-toggle="collapse"][href="#' + element.id + '"],' + '[data-toggle="collapse"][data-target="#' + element.id + '"]'))
     this.transitioning = null
 
     if (this.options.parent) {
@@ -34,7 +33,9 @@
   Collapse.TRANSITION_DURATION = 350
 
   Collapse.DEFAULTS = {
-    toggle: true
+    toggle: true,
+    skipTransition: false,
+    trigger: null
   }
 
   Collapse.prototype.dimension = function () {
@@ -63,10 +64,12 @@
     }
 
     var dimension = this.dimension()
+    var skipTransition = this.options.skipTransition === true
+    var collapsingCls = skipTransition ? '' : 'collapsing'
 
     this.$element
       .removeClass('collapse')
-      .addClass('collapsing')[dimension](0)
+      .addClass(collapsingCls)[dimension](0)
       .attr('aria-expanded', true)
 
     this.$trigger
@@ -77,7 +80,7 @@
 
     var complete = function () {
       this.$element
-        .removeClass('collapsing')
+        .removeClass(collapsingCls)
         .addClass('collapse in')[dimension]('')
       this.transitioning = 0
       this.$element
@@ -88,9 +91,14 @@
 
     var scrollSize = $.camelCase(['scroll', dimension].join('-'))
 
-    this.$element
-      .one('bsTransitionEnd', $.proxy(complete, this))
-      .emulateTransitionEnd(Collapse.TRANSITION_DURATION)[dimension](this.$element[0][scrollSize])
+    if (skipTransition) {
+      complete.call(this)
+      this.$element[dimension](this.$element[0][scrollSize])
+    } else {
+      this.$element
+        .one('bsTransitionEnd', $.proxy(complete, this))
+        .emulateTransitionEnd(Collapse.TRANSITION_DURATION)[dimension](this.$element[0][scrollSize])
+    }
   }
 
   Collapse.prototype.hide = function () {
@@ -101,11 +109,13 @@
     if (startEvent.isDefaultPrevented()) return
 
     var dimension = this.dimension()
+    var skipTransition = this.options.skipTransition === true
+    var collapsingCls = skipTransition ? '' : 'collapsing'
 
     this.$element[dimension](this.$element[dimension]())[0].offsetHeight
 
     this.$element
-      .addClass('collapsing')
+      .addClass(collapsingCls)
       .removeClass('collapse in')
       .attr('aria-expanded', false)
 
@@ -118,17 +128,22 @@
     var complete = function () {
       this.transitioning = 0
       this.$element
-        .removeClass('collapsing')
+        .removeClass(collapsingCls)
         .addClass('collapse')
         .trigger('hidden.bs.collapse')
     }
 
     if (!$.support.transition) return complete.call(this)
 
-    this.$element
-      [dimension](0)
-      .one('bsTransitionEnd', $.proxy(complete, this))
-      .emulateTransitionEnd(Collapse.TRANSITION_DURATION)
+    if (skipTransition) {
+      this.$element[dimension](0)
+      complete.call(this);
+    } else {
+      this.$element
+        [dimension](0)
+        .one('bsTransitionEnd', $.proxy(complete, this))
+        .emulateTransitionEnd(Collapse.TRANSITION_DURATION)
+    }
   }
 
   Collapse.prototype.toggle = function () {
