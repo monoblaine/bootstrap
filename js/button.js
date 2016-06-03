@@ -122,4 +122,9 @@
       $(e.target).closest('.btn').toggleClass('focus', /^focus(in)?$/.test(e.type))
     })
 
+  $(function () {
+    // Add active class to buttons that have checked items (checkbox or radio) on load
+    $('.btn-group > label.btn > input:checked').parent().addClass('active')
+  })
+
 }(jQuery);
